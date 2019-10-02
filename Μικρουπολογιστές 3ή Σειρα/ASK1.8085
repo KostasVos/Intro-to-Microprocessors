@@ -1,0 +1,53 @@
+START:
+	IN 10H
+	MVI A,0Dh	;Set appropriate mask for RST5.5
+ 	SIM 
+	EI			;Enable Interrupts
+
+INPUT_LOOP: JMP INPUT_LOOP
+
+INTR_ROUTINE:
+	EI
+	MVI B,03H		;Set (BC) = 1000, 1 sec delay
+	MVI C,E8H	
+	CALL TURNON_LED	;Turn on leds
+	MVI A,3CH		;Set A=60, it is a timer
+
+CHECK1:
+	PUSH PSW
+				;First seperate digits of A to print on 7-segment display
+	MOV D,A		;Mov to D temporarily
+	ANI 0FH		;Keep only 4 LSB's
+	STA 0900H	;Store to adress 0900, from where it will be displayed
+	
+	MOV A,D
+	ANI F0H		;Keep only 4 MSB's
+	RRC			;Shift 4 times, so they are in the place of 4 LSB's
+	RRC
+	RRC
+	RRC
+	STA 0901H	;Store in next memory location
+	LXI D,0900H	;Point DE to memory location 0900
+	
+	CALL STDM	;Display remaining time
+	CALL DCD
+	CALL DELB
+
+	POP PSW		
+	DCR A		      ;Decrement timer, 
+	CPI 00H		      ;Check if it has reached zero
+	JNZ CHECK1	      ;If not, repeat
+	CALL TURNOFF_LED
+	EI				  ;Else, wait for another interrupt
+	JMP INPUT_LOOP
+
+TURNON_LED:
+	MVI A,00H
+	STA 3000H
+	RET
+
+TURNOFF_LED:
+	MVI A,FFH
+	STA 3000H
+	RET
+END

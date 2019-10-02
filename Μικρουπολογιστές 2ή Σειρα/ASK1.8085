@@ -1,0 +1,60 @@
+START:
+
+	IN 10H		;Initially diasble memory protection
+	LXI H,0900H	;Initialize address
+	MVI A,00H		;Initialize number to be stored
+L1:
+	MOV M,A		;Store number
+	INX H		;Increment address
+	INR A		;Increment Number
+	CPI 00H		;In case of A=00H, aka overflow
+	JNZ L1		;Do not repead, else do repeat
+
+TASK_B:
+
+	LXI H,0900H	;Initialize address BC
+	MVI B,00H
+	MVI C,00H
+
+ONES:
+	MVI D,00H		;D is the number of digits checked, initially 0
+	MOV A,M		;Fetch number from memory
+
+COUNT_BITS:
+
+	MOV E,A		;Store acc temporarily
+	MOV A,D		;Check if D=08H, if all digits have been checked
+	CPI 08H		
+	JZ NEXT		;If yes, check next number
+	INR D		;Else increment D
+	MOV A,E		;Fetch next digit of A
+	RAL			;Using CY from RAL
+	JNC COUNT_BITS
+	INX B		;IF CY=1 then increment BC
+	JMP COUNT_BITS ;Loop until D=08H
+
+NEXT:
+	INX H		;Increment address
+	MOV A,H		;Check if address is past 09FFH
+	CPI 0AH		
+	JZ TASK_C		;If yes, begin next task
+	JMP ONES		;else get next number
+
+TASK_C:
+	LXI H,0900H
+	MVI D,00H	
+
+IS_BETWEEN:
+	MOV A,M		;Fetch a number
+	CPI 10H		;Check if it is less than 10
+	JC NEXT_NUM	;If yes, check next number
+	CPI 60H		;Check if greater than 60
+	JC NEXT_NUM
+	INR D		;If neither, number is in range, increment D
+
+NEXT_NUM:
+	INX H		;Increment address
+	MOV A,H		;Check if address is past 09FFH
+	CPI 0AH		
+	JNZ IS_BETWEEN	;If NOT, get next number
+END

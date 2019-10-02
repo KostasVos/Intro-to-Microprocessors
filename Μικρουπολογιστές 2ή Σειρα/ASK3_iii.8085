@@ -1,0 +1,97 @@
+START:
+	IN 10H 
+
+	MVI B,01H		;B is the output of display, increments starting from 1
+	MVI D,F7H		;Initial position of line 3
+	MVI C,00H 		;C is a counter, in order to read 5 final lines
+					
+LINES3_TO_7:
+				;These lines contain the numbers between 1 and F
+				;Three numbers on each line, starting from line 3
+
+	MOV A,D		;Read line through accumulator
+	STA 2800H
+	LDA 1800H
+	ANI 07H		;07H = 000000111, so sets 5 MSB's to 0
+	CPI 06H		;Compare with 00000110, so 1,4,7 etc
+	JZ DISPLAY	;Call DISPLAY if equal, print based on B
+	INR B		;Increment B
+	CPI 05H		;Compare with 00000101, so 2,5,8 etc
+	JZ DISPLAY
+	INR B	
+	CPI 03H		;Compare with 00000011, so 3,7,9 etc
+	JZ DISPLAY
+	INR B
+	MOV A,D		;Shift D's value once to the left
+	RLC			;So that the mask now points to next line
+	MOV D,A		
+	INR C		;Increment C, repeat 5 times, once for each line
+	MOV A,C	
+	CPI 05H		
+	JNZ LINES3_TO_7
+
+;No discernible pattern for lines 0->2
+;As such, they are handled manually
+
+LINE2:
+	MVI A,FBH	;Line 2 contains 0, STORE/INCR, INCR
+	STA 2800H
+	LDA 1800H
+	ANI 07H
+	MVI B,00H	;Checking 0
+	CPI 06H
+	JZ DISPLAY
+	MVI B,83H	;Checking STORE/INCR
+	CPI 05H
+	JZ DISPLAY
+	MVI B,81H	;Checking ICR
+	CPI 03H
+	JZ DISPLAY
+
+LINE1:
+	MVI A,FDH	;Line 1 contains RUN, FETCH/REG, FETCH ADDR
+	STA 2800H
+	LDA 1800H
+	ANI 07H
+	MVI B,84H	;Checking RUN
+	CPI 06H
+	JZ DISPLAY	
+	MVI B,80H	;Checking FETCH/REG
+	CPI 05H
+	JZ DISPLAY
+	MVI B,82H	;Checking FETCH ADDR
+	CPI 03H
+	JZ DISPLAY
+
+LINE0:
+	MVI A,FEH	;Line 0 contains INSTR STEP, FETCH PC, HDWR STEP
+	STA 2800H
+	LDA 1800H
+	ANI 07H
+	MVI B,86H	;Checking INSTR STEP
+	CPI 06H
+	JZ DISPLAY
+	MVI B,85H	;Checking FETCH PC
+	CPI 05H
+	JZ DISPLAY
+
+	JMP START	;No keys pressed, repeat process
+
+DISPLAY:
+	MOV A,B		;Move code to accumulatoe
+	ANI 0FH		;Keep only 4 LSB's
+	STA 0900H	;Store to adress 0900, from where it will be displayed
+	
+	MOV A,B
+	ANI F0H		;Keep only 4 MSB's
+	RRC			;Shift 4 times, so they are in the place of 4 LSB's
+	RRC
+	RRC
+	RRC
+	STA 0901H	;Store in next memory location
+	LXI D,0900H	;Point DE to memory location 0900
+	
+	CALL STDM	;Call 7-segment display processes
+	CALL DCD
+	JMP START
+END

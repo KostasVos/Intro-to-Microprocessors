@@ -1,0 +1,71 @@
+START:
+	IN 10H		;Disable Memory protection
+	MVI A,0Dh	;Set appropriate mask for RST5.5
+ 	SIM 
+	EI
+
+INPUT_LOOP: JMP INPUT_LOOP
+
+INTR_ROUTINE:
+	CALL TURNOFF_LED	;Turn off leds
+	CALL BLNK			;Set display to blank
+	
+READ1:
+	CALL KIND	;Get input
+	MOV D,A		;Save it to D
+	CPI 10H		;Read until you get number between [00,0F]
+	JNC READ1
+READ2:
+	CALL KIND	;Get second input
+	MOV E,A		;Save it to E
+	CPI 10H
+	JNC READ1
+	EI
+
+DISPLAY:
+	MOV A,D		;Move first number (LSB) to accumulator
+	STA 0900H	;Store to adress 0900, from where it will be displayed
+	
+	MOV A,E		;Move next number (MSB) to accumulator
+	STA 0901H	;Store in next memory location
+	
+	MOV A,E		;Move MSB to accumulator and rotate 4 times
+	RRC
+	RRC
+	RRC
+	RRC
+	ADD D		;Add LSB
+	PUSH PSW
+	
+	LXI D,0900H	;Point DE to memory location 0900
+		
+	CALL STDM	;Call 7-segment display processes
+
+	POP PSW		;Check which LED will turn on
+	CMP C		;If (num)>C then turn on led 3
+	JNC CHECK2
+	MVI A,FBH	
+	JMP L1
+CHECK2:
+	CMP B		;Else if (num)>B
+	JNC CHECK3
+	MVI A,FDH	;Turn on led 2
+	JMP L1
+CHECK3:
+	MVI A,FEH	;Else turn on led 1
+L1:	
+	STA 3000H	;Loop until new interrupt occurs
+	CALL DCD
+	JMP L1
+
+
+TURNON_LED:
+	MVI A,00H
+	STA 3000H
+	RET
+
+TURNOFF_LED:
+	MVI A,FFH
+	STA 3000H
+	RET
+END

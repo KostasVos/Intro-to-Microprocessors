@@ -1,0 +1,44 @@
+START:
+
+	CALL KIND	;Read input and decrement by 1
+	DCR A		;So that it is in range [0,7]
+
+	MVI D,00H	;D is a counter, position of LSB which is ON
+				;Initially at 0
+	MOV E,A		;E is a temporary register
+
+LOOP1:
+	MOV A,E		;Load data to accumulator
+	CMP D		
+	JZ OUTPUT	;If LSB=1, output result using D register
+
+	INR D		;Else, increment D
+	MOV E,A		
+	MOV A,D		;Check if D<8, in which case restart loop
+	CPI 08H
+	JNZ LOOP1
+	MVI A,FFH	;If D=8 output zeros
+	STA 3000H	
+	JMP START	
+
+OUTPUT:
+	MVI B,00H	;B is a counter
+	MVI C,FEH	;C containts the data to be printed on the leds
+				;Initially set at 11111110, only led 0 is on
+LOOP2:
+	MOV A,B		;Check if B has reached D's value
+	CMP D		;If yes, go to RESULT
+	JZ RESULT	;Which turns leds on, using C's value
+	MOV A,C		;Else, shift C left once
+	RLC	
+	MOV C,A	
+	INR B		;Increment B and loop again
+	JMP LOOP2
+
+RESULT:
+	MOV A,C		;C contains the correct value
+	STA 3000H
+	JMP START
+
+END
+	

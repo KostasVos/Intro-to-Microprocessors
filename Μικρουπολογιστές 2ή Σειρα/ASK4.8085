@@ -1,0 +1,68 @@
+START:
+	IN 10H
+	MVI E,00H		;E contains the result, initially set at 0
+
+	LDA 2000H		;Load input
+
+CALCULATE_X3:
+	RLC		;Rotate once, now next digit we want to use is in LSB position
+	MOV D,A	;Save current
+
+	ANI 01H	;Set all digits except LSB 0
+
+	MOV B,A	;Store in B, it is now either 00H, or O1H
+
+	CALL NEXT_DIGIT	;Get next digit
+	ANA B	;A (and) B -> A, now A is either 00H, or 01H
+	ADD E	;Add the result to E, essentially setting its LSB to result
+	RLC		;Rotate left once, so next result can be added
+	MOV E,A	;Update E
+
+
+CALCULATE_X2:
+	CALL NEXT_DIGIT	;Similarily as X3
+	MOV B,A
+	CALL NEXT_DIGIT
+	ANA B
+	ADD E
+	RLC
+	MOV E,A
+
+CALCULATE_X1:
+	CALL NEXT_DIGIT
+	MOV B,A
+	CALL NEXT_DIGIT
+	ORA B
+	MOV C,A 	;Result is needed on X1, so we save it
+	ADD E
+	RLC
+	MOV E,A
+
+CALCULATE_X0:
+	CALL NEXT_DIGIT
+	MOV B,A
+	CALL NEXT_DIGIT
+	ORA B	;First A or B is calculated
+	XRA C 	;Then the result is used on the XOR gate
+	ADD E
+	MOV E,A
+
+
+RESULT:
+	MOV A,E	;E is now ready to be displayed
+	CMA
+	STA 3000H
+	JMP START
+
+
+NEXT_DIGIT:
+	MOV A,D	;Get current state of input
+	RLC		;Rotate once so the digit we want is on LSB position
+	MOV D,A	;Save current state
+	ANI 01H	;Use mask, so everything except LSB is set to 0
+	RET
+END
+
+
+
+
